@@ -1,9 +1,11 @@
-import java.io.*;
-import java.net.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Scanner;
 
-class ClientHandler implements Runnable{
+class ClientHandler extends Thread{
     private String name;
     private Socket socket;
     private DataOutputStream dataOutputStream;
@@ -17,13 +19,19 @@ class ClientHandler implements Runnable{
       this.dataOutputStream = new DataOutputStream(socket.getOutputStream());
       //try to get the name of the client
       this.name = this.dataInputStream.readUTF();
+      this.setName(name);
       //if got the name:
-      this.dataOutputStream.writeUTF("Welcome To The Server %s".formatted(this.name));
-        
-        
+      this.dataOutputStream.writeUTF("welcome %s!".formatted(this.name));
+      Server.sendToServer("%s has connected to the chat!".formatted(this.name));
+
     }
       catch (Exception e){
-          
+          try {
+              this.dataOutputStream.writeUTF("Error");
+          }
+          catch (Exception ignored){
+              System.out.println("Error");
+          }
       }
     }
 
@@ -31,12 +39,7 @@ class ClientHandler implements Runnable{
        return "%s -> %s".formatted(this.name, message);
     }
 
-    public String getName() {
-      return name;
-    }
-    public void setName(String name) {
-      this.name = name;
-    }
+
     public Socket getSocket() {
       return socket;
     }
@@ -65,11 +68,22 @@ class ClientHandler implements Runnable{
       //listen for messages and send them to the server.
       while(true){
         try{
-        String message = this.dataInputStream.readUTF();
-        Server.sendToServer(this.formatMessage(message));
-        }
-        catch(IOException e){
 
+            String message = this.dataInputStream.readUTF();
+            System.out.println(formatMessage(message));
+            Server.sendToServer(this.formatMessage(message));
+        }
+        catch (Exception e){
+            System.out.printf("Error with %s -> %s%n", this.getName(), e.getMessage());
+            try {
+                this.socket.close();
+                this.dataOutputStream.close();
+                this.dataInputStream.close();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+            interrupt();
+            break;
         }
       }
       
@@ -106,16 +120,16 @@ public class Server {
               //try to create a socket of him
               ClientHandler newClient = new ClientHandler(newConnection);
               connections.add(newClient);
-              Thread clienThread = new Thread(newClient);
-              clienThread.start();
+              newClient.start();
             }
               catch(IOException ioException){
-                 
+                 break;
               }
              }
           }
       };
       Thread acceptorThread = new Thread(acceptor);
+      acceptorThread.setName("Connector");
       acceptorThread.start();
     }
 
@@ -125,7 +139,7 @@ public class Server {
           client.getDataOutputStream().writeUTF(message);
         }
         catch(Exception e){
-
+            e.printStackTrace();
         }
       }
   }
