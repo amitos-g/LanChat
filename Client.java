@@ -1,6 +1,5 @@
 import java.io.*;
 import java.net.*;
-import java.nio.*;
 import java.util.*;
 
 public class Client{
@@ -62,7 +61,7 @@ public class Client{
                         System.out.println(msg);
                     }
                     catch(Exception e){
-                        System.out.println("Error while receiving message");
+                        System.out.println("Server is down");
                         System.exit(0);
                     }
                 }

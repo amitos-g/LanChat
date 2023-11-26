@@ -10,7 +10,8 @@ class ClientHandler extends Thread{
     private Socket socket;
     private DataOutputStream dataOutputStream;
     private DataInputStream dataInputStream;
-    
+    public static int lastID;
+    private int cid;
 
     public ClientHandler(Socket socket) {
       this.socket = socket;
@@ -20,6 +21,8 @@ class ClientHandler extends Thread{
       //try to get the name of the client
       this.name = this.dataInputStream.readUTF();
       this.setName(name);
+      this.cid = lastID+1;
+      lastID++;
       //if got the name:
       this.dataOutputStream.writeUTF("welcome %s!".formatted(this.name));
       Server.sendToServer("%s has connected to the chat!".formatted(this.name));
@@ -35,11 +38,17 @@ class ClientHandler extends Thread{
       }
     }
 
+
+
+
     public String formatMessage(String message){
        return "%s -> %s".formatted(this.name, message);
     }
 
 
+    public int getCID(){
+      return this.cid;
+    }
     public Socket getSocket() {
       return socket;
     }
@@ -74,7 +83,8 @@ class ClientHandler extends Thread{
             Server.sendToServer(this.formatMessage(message));
         }
         catch (Exception e){
-            System.out.printf("Error with %s -> %s%n", this.getName(), e.getMessage());
+            Server.removeFromServer(this.cid);
+            Server.sendToServer("Server -> %s has disconnected".formatted(this.getName()));
             try {
                 this.socket.close();
                 this.dataOutputStream.close();
@@ -133,6 +143,16 @@ public class Server {
       acceptorThread.start();
     }
 
+
+  public static void removeFromServer(int cid)  {
+     for(var client : connections){
+        if(client.getCID() == cid){
+          connections.remove(client);
+        }
+     }
+  }
+
+  
   public static void sendToServer(String message){
       for(var client : connections){
         try{
